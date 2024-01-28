@@ -14,6 +14,7 @@ Token creation:
 - UI will provide options to create tokens specific to an integration
 - UI will provide option generic user token can be used in automation
 - Library will provide ability to create Internal JWTs only.
+- User and service tokens can only be created by ssd-gate post authentication. SSD services can request service-token by creating an internal-account with their service-name
 
 Library Functions
 - Authnenticate
@@ -26,3 +27,4 @@ Library Functions
 - IsAdmin : true allows unconditional access
 
 **TODO:** ssd-gate has to have admin-groups definition
+**TODO:** ssd-gate to have API for creating service tokens request based on internal-account token
