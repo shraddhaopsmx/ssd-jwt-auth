@@ -32,6 +32,7 @@ TODO:
 - Create Service-Token from UI (would not be used, this is only for testing)
 - Sample Service implementation for testing internal-tokens, booting up (initial auth)
 - Change the token signing to cert/key from hMAc
+- Method to get common attributes: type, user, groups. instanceID, servicename, isAdmin with reasonable defaults
 - API to service the public key
 - API to request tokens - how do we "boot up the authentication?" - shared secret?
 - Pending: APIs for orgID and Instance ID
