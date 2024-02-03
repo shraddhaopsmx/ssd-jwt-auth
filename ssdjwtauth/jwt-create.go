@@ -52,10 +52,18 @@ type SsdInternalToken struct {
 	IsAdmin bool   `json:"isAdmin"` // As per spec if a service wants to elevate the permissions
 }
 
+type SsdToken struct {
+	Type string
+}
+
 // JWT structure including Standard claims (renamed as registered claims)
 type SsdJwtClaims struct {
 	SSDToken map[string]interface{} `json:"ssd.opsmx.io"`
 	jwt.RegisteredClaims
+}
+
+func (t *SsdToken) GetTokenType() string {
+	return t.Type
 }
 
 // Create a new JWT and return a base64 encoded string.
@@ -120,7 +128,8 @@ func GetInternalJWT(service string, isAdmin bool) (string, error) {
 func getBaseClaims(duration time.Duration) jwt.MapClaims {
 	log.Printf("Duration: %v", duration)
 	claims := jwt.MapClaims{
-		"aud": "MustBeWrong", // "ssd.opsmx.io",
+		"iss": "OpsMx",
+		"aud": "ssd.opsmx.io",
 		"nbf": time.Now().Add(skewTimeout).Unix(),
 		"exp": time.Now().Add(duration).Unix(), // JWT expiration time
 		"jti": uuid.New(),

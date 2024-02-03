@@ -13,6 +13,69 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Get User Token Claim from token string
+func GetSsdUserToken(m *map[string]interface{}) (*SsdUserToken, error) {
+	tokenType, _ := (*m)["type"].(string)
+	if tokenType != SSDTokenTypeUser {
+		return nil, fmt.Errorf("not user type SSDToken")
+	}
+	sut := SsdUserToken{}
+	err := mapstructure.Decode(m, &sut)
+	if err != nil {
+		log.Printf("Error Parsing UserToken:%v", err)
+		return nil, err
+	}
+	return &sut, nil
+}
+
+// Get Service Token Claim from token string
+func GetSsdServiceToken(m *map[string]interface{}) (*SsdServiceToken, error) {
+	tokenType, _ := (*m)["type"].(string)
+	if tokenType != SSDTokenTypeService {
+		return nil, fmt.Errorf("not Service type SSDToken")
+	}
+	sut := SsdServiceToken{}
+	err := mapstructure.Decode(m, &sut)
+	if err != nil {
+		log.Printf("Error Parsing UserToken:%v", err)
+		return nil, err
+	}
+	return &sut, nil
+}
+
+// Get Service Token Claim from token string
+func GetSsdInternalToken(m *map[string]interface{}) (*SsdInternalToken, error) {
+	tokenType, _ := (*m)["type"].(string)
+	if tokenType != SSDTokenTypeInternal {
+		return nil, fmt.Errorf("not Internal type SSDToken")
+	}
+	sut := SsdInternalToken{}
+	err := mapstructure.Decode(m, &sut)
+	if err != nil {
+		log.Printf("Error Parsing UserToken:%v", err)
+		return nil, err
+	}
+	return &sut, nil
+}
+
+// Look for Authorization header(s) and see if we can get the token String
+func getTokenStrFromHeader(r *http.Request) string {
+	var tokenStr string
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		auth = r.Header.Get("X-OpsMx-Auth") // If the header is not Authorization, check X-OpsMx-Auth
+		if auth == "" {
+			return ""
+		}
+		tokenStr = auth // if X-OpsMx-Auth is there, there is no "Bearer" type
+	} else {
+		splitToken := strings.Split(auth, "Bearer ")
+		tokenStr = splitToken[1]
+	}
+	return tokenStr
+}
+
+// Get Uid from Incoming Request
 func GetUserFromReqHeader(r *http.Request) (string, error) {
 	tokenStr := getTokenStrFromHeader(r)
 	token, err := jwt.ParseWithClaims(tokenStr, &SsdJwtClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -36,54 +99,38 @@ func GetUserFromReqHeader(r *http.Request) (string, error) {
 	return "", fmt.Errorf("%v is not valid, has unexpected claims or Username is empty", token.Claims)
 }
 
-func GetSsdUserTokenFromStr(tokenStr string) (*SsdUserToken, error) {
-	m, err := getSsdTokenFromClaims(tokenStr)
-	if err != nil {
-		return nil, err
-	}
-
-	tokenType, _ := (*m)["type"].(string)
-	if tokenType != SSDTokenTypeUser {
-		return nil, fmt.Errorf("not user type SSDToken")
-	}
-	sut := SsdUserToken{}
-	err = mapstructure.Decode(m, &sut)
-	if err != nil {
-		log.Printf("Error Parsing UserToken:%v", err)
-		return nil, err
-	}
-	return &sut, nil
-}
-
-func GetSsdServiceTokenFromStr(tokenStr string) (*SsdServiceToken, error) {
-	m, err := getSsdTokenFromClaims(tokenStr)
-	if err != nil {
-		return nil, err
-	}
-	tokenType, _ := (*m)["type"].(string)
-	if tokenType != SSDTokenTypeService {
-		return nil, fmt.Errorf("not Service type SSDToken")
-	}
-	sut := SsdServiceToken{}
-	err = mapstructure.Decode(m, &sut)
-	if err != nil {
-		log.Printf("Error Parsing UserToken:%v", err)
-		return nil, err
-	}
-	return &sut, nil
-}
-
 // Method to Valid the token, extract Claims, check that its a Valid Type
-// And return it for further processing
-func getSsdTokenFromClaims(tokenStr string) (*map[string]interface{}, error) {
+// And return it for further processing SsdToken
+// func getSsdTokenFromClaims(tokenStr string) (*SsdToken, error) {
+func GetSsdTokenFromClaims(tokenStr string) (*map[string]interface{}, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &SsdJwtClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok { // Validate method
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
+		iss, err := token.Claims.GetIssuer()
+		if err != nil {
+			return nil, fmt.Errorf("issuer could not be found: %v", token.Claims)
+		}
+		if iss != "OpsMx" {
+			return nil, fmt.Errorf("issuer is invalid:%s, expecting:%s", string(iss), "OpsMx")
+		}
+		tmp, err := token.Claims.GetAudience()
+		if err != nil {
+			return nil, fmt.Errorf("audience could not be found: %v", token.Claims)
+		}
+		aud, err := tmp.MarshalJSON()
+		if err != nil {
+			return nil, fmt.Errorf("audience could not be found: %v", tmp)
+		}
+		audStr := "[\"ssd.opsmx.io\"]"
+		if string(aud) != audStr {
+			return nil, fmt.Errorf("audience is invalid: %s, expecting:%s", string(aud), audStr)
+		}
+
 		return []byte(hmacSecret), nil
 	})
 	if err != nil {
-		log.Printf("Error ParseWithClaims:%v", err)
+		// log.Printf("Error ParseWithClaims:%v", err)
 		return nil, err
 	}
 	// Check if Valid
@@ -93,7 +140,10 @@ func getSsdTokenFromClaims(tokenStr string) (*map[string]interface{}, error) {
 	}
 
 	if claims, ok := token.Claims.(*SsdJwtClaims); ok {
+		// log.Printf("Token Audience:%s", claims.Audience)
+		// log.Printf("Token Audience:%s", claims)
 		st := claims.SSDToken
+
 		tokenType, ok := st["type"].(string)
 		if !ok {
 			log.Println("Token Type could not be in the Claim")
@@ -113,22 +163,11 @@ func getSsdTokenFromClaims(tokenStr string) (*map[string]interface{}, error) {
 	return nil, fmt.Errorf("SSD token not found in the JWT claims")
 }
 
-// Look for Authorization header(s) and see if we can get the token String
-func getTokenStrFromHeader(r *http.Request) string {
-	var tokenStr string
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		auth = r.Header.Get("X-OpsMx-Auth") // If the header is not Authorization, check X-OpsMx-Auth
-		if auth == "" {
-			return ""
-		}
-		tokenStr = auth // if X-OpsMx-Auth is there, there is no "Bearer" type
-	} else {
-		splitToken := strings.Split(auth, "Bearer ")
-		tokenStr = splitToken[1]
-	}
-	return tokenStr
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+////////// NO CODE BELOW THIS LINE, CUT-PASTE STUFF ONLY //////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // func createSignedToken(sut *jwt.MapClaims) (bool, string, error) {
 // 	claims := jwt.MapClaims{
@@ -200,3 +239,10 @@ func getTokenStrFromHeader(r *http.Request) string {
 // func (s *SsdInternalToken) GetTokenType() string {
 // 	return s.Type
 // }
+//
+//	func GetSsdServiceTokenFromStr(tokenStr string) (*SsdServiceToken, error) {
+//		m, err := GetSsdTokenFromClaims(tokenStr)
+//
+//	if err != nil {
+//		return nil, err
+//	}
