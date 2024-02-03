@@ -8,55 +8,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/mitchellh/mapstructure"
 )
-
-// { // From Shraddha, for reference only
-// 	"aud": "opsmx.ssd",
-// 	"https://ssd.opsmx.io/jwt/claims": {
-// 	  "OpsMxGroups" :["team2admin"]
-// 	}
-//   }
-
-type SsdUserToken struct {
-	Type    string   `json:"type"`          // can be "user" or "serviceAccount"
-	Uid     string   `json:"uid,omitempty"` //Username that we will use for authentication
-	OrgID   string   `json:"orgId,omitempty"`
-	Groups  []string `json:"groups,omitempty"`
-	IsAdmin bool     `json:"isAdmin"`
-}
-
-type SsdServiceToken struct {
-	Type       string `json:"type"`    // can be "user" or "serviceAccount"
-	Service    string `json:"service"` //Username that we will use for authentication
-	InstanceID string `json:"instId"`  // Need API for this
-	OrgID      string `json:"orgId,omitempty"`
-}
-
-type SsdInternalToken struct {
-	Type    string `json:"type"`    // can be "user" or "serviceAccount"
-	Service string `json:"service"` //Username that we will use for authentication
-	IsAdmin bool   `json:"isAdmin"`
-}
-
-type SsdJwtClaims struct {
-	SSDToken map[string]interface{} `json:"ssd.opsmx.io"`
-	jwt.RegisteredClaims
-}
-
-type SsdJwtUser struct {
-	Username string
-	Groups   []string
-	IsAdmin  bool
-	JTI      string    // Token identifier
-	ExpTime  time.Time // Expiry time, needed for clean up
-}
-
-var adminGroups []string
-var sessionTimeout time.Duration
 
 func GetUserFromReqHeader(r *http.Request) (string, error) {
 	tokenStr := getTokenStrFromHeader(r)
