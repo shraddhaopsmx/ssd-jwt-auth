@@ -26,5 +26,20 @@ Library Functions
 - InstanceID (service accounts)
 - IsAdmin : true allows unconditional access
 
-**TODO:** ssd-gate has to have admin-groups definition
+TODO:
+- Middleware to let JWT header pass (user object)
+- Create user-token from UI
+- Create Service-Token from UI (would not be used, this is only for testing)
+- Sample Service implementation for testing internal-tokens, booting up (initial auth)
+- Change the token signing to cert/key from hMAc
+- Method to get common attributes: type, user, groups. instanceID, servicename, isAdmin with reasonable defaults
+- API to service the public key
+- API to request tokens - how do we "boot up the authentication?" - shared secret?
+- Pending: APIs for orgID and Instance ID
+- DONE: Methods to test tokens
+- DONE: Methods to create tokens
+
 **TODO:** ssd-gate to have API for creating service tokens request based on internal-account token
+
+**DONE:** ssd-gate has to have admin-groups definition, part of config-file
+
