@@ -59,7 +59,7 @@ func GetSsdInternalToken(m *map[string]interface{}) (*SsdInternalToken, error) {
 }
 
 // Look for Authorization header(s) and see if we can get the token String
-func getTokenStrFromHeader(r *http.Request) string {
+func GetTokenStrFromHeader(r *http.Request) string {
 	var tokenStr string
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
@@ -77,12 +77,12 @@ func getTokenStrFromHeader(r *http.Request) string {
 
 // Get Uid from Incoming Request
 func GetUserFromReqHeader(r *http.Request) (string, error) {
-	tokenStr := getTokenStrFromHeader(r)
+	tokenStr := GetTokenStrFromHeader(r)
 	token, err := jwt.ParseWithClaims(tokenStr, &SsdJwtClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok { // Validate method
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return hmacSecret, nil
+		return []byte(hmacSecret), nil
 	})
 
 	if err != nil {

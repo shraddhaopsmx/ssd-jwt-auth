@@ -52,29 +52,51 @@ type SsdInternalToken struct {
 	IsAdmin bool   `json:"isAdmin"` // As per spec if a service wants to elevate the permissions
 }
 
-type SsdToken struct {
-	Type string
-}
-
 // JWT structure including Standard claims (renamed as registered claims)
 type SsdJwtClaims struct {
 	SSDToken map[string]interface{} `json:"ssd.opsmx.io"`
 	jwt.RegisteredClaims
 }
 
-func (t *SsdToken) GetTokenType() string {
+// All token types implement this interface
+type SSDToken interface {
+	GetTokenType() string
+	IsAdminToken() bool
+}
+
+// Interface to get a type, without know what that type is
+func (t SsdUserToken) GetTokenType() string {
 	return t.Type
+}
+func (t SsdServiceToken) GetTokenType() string {
+	return t.Type
+}
+
+func (t SsdInternalToken) GetTokenType() string {
+	return t.Type
+}
+
+func (t SsdUserToken) IsAdminToken() bool {
+	return t.IsAdmin
+}
+
+func (t SsdServiceToken) IsAdminToken() bool {
+	return false // In Service Token, there is NO admin or not-admin, they are never admins
+}
+
+func (t SsdInternalToken) IsAdminToken() bool {
+	return t.IsAdmin
 }
 
 // Create a new JWT and return a base64 encoded string.
 // lifeTime legitimate values are: 30, 60, 90 and 365 days. 0 = Session Token, based on session Timeout value
 // Returns: token-string, nil on success or non-nil error
-func GetUserJWT(uid string, groups []string, lifeTime uint) (string, error) {
+func CreateUserJWT(uid string, groups []string, lifeTime uint) (string, error) {
 	sut := &SsdUserToken{}
 	sut.Uid = uid
 	sut.Groups = groups
-	sut.OrgID = "NoAPIAvailableYET"                      // Need to call an API to get an Org of a USER??
-	sut.IsAdmin = IsUserAnAdmin(sut.Groups, adminGroups) // Set the IsAdmin flag
+	sut.OrgID = "NoAPIAvailableYET"         // Need to call an API to get an Org of a USER??
+	sut.IsAdmin = IsUserAnAdmin(sut.Groups) // Set the IsAdmin flag
 	sut.Type = SSDTokenTypeUser
 	// claims := getLoginClaims(sut)
 	tmpDuration := sessionTimeout
@@ -99,7 +121,7 @@ func GetUserJWT(uid string, groups []string, lifeTime uint) (string, error) {
 
 // Create a new Service JWT and return a base64 encoded string
 // Returns: token-string, nil on success or non-nil error
-func GetServiceJWT(service, instanceId, orgID string) (string, error) {
+func CreateServiceJWT(service, instanceId, orgID string) (string, error) {
 	sut := &SsdServiceToken{}
 	sut.Type = SSDTokenTypeService
 	sut.Service = service
@@ -113,7 +135,7 @@ func GetServiceJWT(service, instanceId, orgID string) (string, error) {
 
 // Create a new Internal JWT and return a base64 encoded string
 // Returns: token-string, nil on success or non-nil error
-func GetInternalJWT(service string, isAdmin bool) (string, error) {
+func CreateInternalJWT(service string, isAdmin bool) (string, error) {
 	sut := &SsdInternalToken{}
 	sut.Type = SSDTokenTypeInternal
 	sut.Service = service

@@ -14,14 +14,14 @@ import (
 func JWTAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Handling JWT req:%s\n", r.URL.String())
-		userName, err := GetUserFromReqHeader(r)
+		tokenStr := GetTokenStrFromHeader(r)
+		_, err := GetSsdTokenFromClaims(tokenStr)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(fmt.Sprintln(err)))
 			return
 		}
-		//Already logged in, set the header and send it.
-		w.Header().Set("X-SPINNAKER-USER", string(userName))
+		//Token is Valid
 		next.ServeHTTP(w, r)
 	})
 }
