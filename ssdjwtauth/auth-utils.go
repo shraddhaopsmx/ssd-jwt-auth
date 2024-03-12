@@ -54,7 +54,7 @@ func GetServiceTokenInfo(tokenStr string) (serviceName, instanceId, orgId string
 			return "", "", "", fmt.Errorf("token is not a Service Token:%s", tokenStr)
 		}
 	}
-	return sut.Service, sut.InstanceID, sut.OrgID, nil
+	return sut.Service, sut.InstId, sut.OrgID, nil
 }
 
 // Given a token, knowning it is a InternalToken, call this method to get the details
@@ -96,7 +96,7 @@ func GetServiceInfoFromSSDToken(tok SSDToken) (serviceName, instanceId, orgId st
 			return "", "", "", fmt.Errorf("token is not a Service Token")
 		}
 	}
-	return sut.Service, sut.InstanceID, sut.OrgID, nil
+	return sut.Service, sut.InstId, sut.OrgID, nil
 }
 
 // Given a token, call DecodeToken, call GetTokenType() and call this method if it is of type Internal

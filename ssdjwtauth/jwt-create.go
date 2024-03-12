@@ -38,10 +38,10 @@ type SsdUserToken struct {
 
 // Structure for Service Token Claims that can be created via UI, or via API with a valid token
 type SsdServiceToken struct {
-	Type       string `json:"type"`            // can be "user" or "serviceAccount"
-	Service    string `json:"service"`         // Name of the Service (e.g. Jenkins) that we will use for authentication
-	InstanceID string `json:"instId"`          // Instance of Service (which Jenkins are we talking about), Need API for this
-	OrgID      string `json:"orgId,omitempty"` // Organization ID, Need API for this
+	Type    string `json:"type"`            // can be "user" or "serviceAccount"
+	Service string `json:"service"`         // Name of the Service (e.g. Jenkins) that we will use for authentication
+	InstId  string `json:"instId"`          // Instance of Service (which Jenkins are we talking about), Need API for this
+	OrgID   string `json:"orgId,omitempty"` // Organization ID, Need API for this
 }
 
 // Structure for Internal Token used for service-to-service communication. Any of the services
@@ -125,7 +125,7 @@ func CreateServiceJWT(service, instanceId, orgID string) (string, error) {
 	sut := &SsdServiceToken{}
 	sut.Type = SSDTokenTypeService
 	sut.Service = service
-	sut.InstanceID = instanceId
+	sut.InstId = instanceId
 	sut.OrgID = orgID
 	sut.Type = SSDTokenTypeService
 	claims := getBaseClaims(serviceTokenTimeout)
